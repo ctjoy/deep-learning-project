@@ -136,7 +136,7 @@ def train(epoch):
             # Calulate the inception score and FID score
             use_cuda = True if torch.cuda.is_available() else False
             inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cuda, batch_size=32, resize=True, splits=10)
-            print('Inception Score: {:.2f}±{:.2f}'.format(inception_score_mean, inception_score_std)
+            print('Inception Score: {:.2f}±{:.2f}'.format(inception_score_mean, inception_score_std))
 
             fid_score = calculate_fid_given_paths(('out/real', 'out/fake'), args.batch_size, device)
             print('FID Score: {:.2f}'.format(fid_score))
