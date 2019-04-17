@@ -16,6 +16,13 @@ from evaluation.fid_score import calculate_fid_given_paths
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
+FID_SCORE_BLOCK_INDEX_BY_DIM = {
+    64: 0,   # First max pooling features
+    192: 1,  # Second max pooling featurs
+    768: 2,  # Pre-aux classifier features
+    2048: 3  # Final average pooling features
+}
+
 # Hyper parameters
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=64)
@@ -23,6 +30,10 @@ parser.add_argument('--num_epochs', type=int, default=200)
 parser.add_argument('--loss', type=str, default='hinge')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
 parser.add_argument('--model', type=str, default='resnet')
+parser.add_argument('--fid_sroce_feature_dims', type=int, default=2048,
+                    choices=list(FID_SCORE_BLOCK_INDEX_BY_DIM),
+                    help=('Dimensionality of Inception features to use. '
+                          'By default, uses pool3 features'))
 
 args = parser.parse_args()
 
@@ -126,7 +137,7 @@ def train(epoch):
 
         if (batch_idx+1) % 100 == 0:
             print('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
-                   .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
+                  .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
 
             # Save the picture
             torchvision.utils.save_image(data, 'out/real/epoch_{}_batch_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
@@ -139,7 +150,7 @@ def train(epoch):
             inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cuda, batch_size=32, resize=True, splits=10)
             print('Inception Score: {:.2f}±{:.2f}'.format(inception_score_mean, inception_score_std))
 
-            fid_score = calculate_fid_given_paths(('out/real', 'out/fake'), args.batch_size, device)
+            fid_score = calculate_fid_given_paths(('out/real', 'out/fake'), args.batch_size, device, args.fid_sroce_feature_dims)
             print('FID Score: {:.2f}'.format(fid_score))
 
 os.makedirs(args.checkpoint_dir, exist_ok=True)
