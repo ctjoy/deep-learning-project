@@ -5,8 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import ExponentialLR
-from torchvision import datasets, transforms
+import torchvision
 from torch.autograd import Variable
 # import model_resnet
 import model
@@ -26,17 +25,15 @@ except ImportError:
 
 
 # Device configuration
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('Using device:', device)
 
 # Hyper parameters
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--num_epochs', type=int, default=200)
-parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
-parser.add_argument('--disc_iters', type=int, default=5, help='Number of updates to discriminator for every update to generator.')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
-
 parser.add_argument('--model', type=str, default='resnet')
 
 args = parser.parse_args()
@@ -44,43 +41,69 @@ args = parser.parse_args()
 # CIFAR-10 dataset
 dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
                                        download=True,
-                                       transform=transforms.Compose([
-                                           transforms.ToTensor(),
-                                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+                                       transform=torchvision.transforms.Compose([
+                                           torchvision.transforms.Resize(32),
+                                           torchvision.transforms.ToTensor(),
+                                           torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
 
 
 # Data loader
 loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                                      shuffle=True, num_workers=2)
 
-# According to the paper
+# Setting hyper parameter according to the paper
 Z_dim = 128
+adam_alpha = 0.0002
+adam_beta1 = 0.0
+adam_beta2 = 0.9
+d_iters = 5 # Number of updates to discriminator for every update to generator
 
 # Model
-# discriminator = torch.nn.DataParallel(Discriminator()).cuda() # TODO: try out multi-gpu training
 # if args.model == 'resnet':
-#     discriminator = model_resnet.Discriminator().cuda()
-#     generator = model_resnet.Generator(Z_dim).cuda()
+#     discriminator = model_resnet.Discriminator().to(device)
+#     generator = model_resnet.Generator(Z_dim).to(device)
 # else:
-# discriminator = model.Discriminator().cuda()
-# generator = model.Generator(Z_dim).cuda()
 discriminator = model.Discriminator().to(device)
 generator = model.Generator(Z_dim).to(device)
 
-# Loss and optimizer
-# because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to
-# optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
-# TODO: replace Parameters with buffers, which aren't returned from .parameters() method.
-optim_disc = optim.Adam(filter(lambda p: p.requires_grad, discriminator.parameters()), lr=args.lr, betas=(0.0,0.9))
-optim_gen  = optim.Adam(generator.parameters(), lr=args.lr, betas=(0.0,0.9))
+# Optimizer
+optim_disc = optim.Adam(discriminator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
+optim_gen  = optim.Adam(generator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
 
-# use an exponentially decaying learning rate
-# scheduler_d = optim.lr_scheduler.ExponentialLR(optim_disc, gamma=0.99)
-# scheduler_g = optim.lr_scheduler.ExponentialLR(optim_gen, gamma=0.99)
+# Loss function
+def discriminator_loss(d_real, d_fake):
+    if args.loss == 'hinge':
+        real_loss = nn.ReLU()(1.0 - d_real).mean()
+        fake_loss = nn.ReLU()(1.0 + d_fake).mean()
 
-# Train the model
+    elif args.loss == 'wasserstein':
+        real_loss = -d_real.mean()
+        fake_loss = d_fake.mean()
+
+    else:
+        real_label = Variable(torch.ones(args.batch_size, 1).to(device))
+        fake_label = Variable(torch.zeros(args.batch_size, 1).to(device))
+
+        real_loss = nn.BCEWithLogitsLoss()(d_real, real_label)
+        fake_loss = nn.BCEWithLogitsLoss()(d_fake, fake_label)
+
+    return real_loss + fake_loss
+
+def generator_loss(d_fake):
+    if args.loss == 'hinge' or args.loss == 'wasserstein':
+        return -d_fake.mean()
+    else:
+        real_label = Variable(torch.ones(args.batch_size, 1).to(device))
+        return nn.BCEWithLogitsLoss()(d_fake, real_label)
+
+# Training function
 total_step = len(loader)
+fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 def train(epoch):
+
+    if not os.path.exists('out/'):
+        os.makedirs('out/')
+
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
             continue
@@ -88,40 +111,40 @@ def train(epoch):
         target = target.to(device)
 
         # Update discriminator
-        for _ in range(args.disc_iters):
+        for _ in range(d_iters):
             z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
             optim_disc.zero_grad()
-            optim_gen.zero_grad()
-            if args.loss == 'hinge':
-                disc_loss = nn.ReLU()(1.0 - discriminator(data)).mean() + nn.ReLU()(1.0 + discriminator(generator(z))).mean()
-            elif args.loss == 'wasserstein':
-                disc_loss = -discriminator(data).mean() + discriminator(generator(z)).mean()
-            else:
-                disc_loss = nn.BCEWithLogitsLoss()(discriminator(data), Variable(torch.ones(args.batch_size, 1).to(device))) + \
-                    nn.BCEWithLogitsLoss()(discriminator(generator(z)), Variable(torch.zeros(args.batch_size, 1).to(device)))
-            disc_loss.backward()
+
+            d_real = discriminator(data)
+            d_fake = discriminator(generator(z))
+
+            loss_disc = discriminator_loss(d_real, d_fake)
+            loss_disc.backward()
+
             optim_disc.step()
 
         z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 
         # Update generator
-        optim_disc.zero_grad()
         optim_gen.zero_grad()
-        if args.loss == 'hinge' or args.loss == 'wasserstein':
-            gen_loss = -discriminator(generator(z)).mean()
-        else:
-            gen_loss = nn.BCEWithLogitsLoss()(discriminator(generator(z)), Variable(torch.ones(args.batch_size, 1).to(device)))
-        gen_loss.backward()
+
+        d_fake = discriminator(generator(z))
+
+        loss_gen = generator_loss(d_fake)
+        loss_gen.backward()
+
         optim_gen.step()
 
         if (batch_idx+1) % 100 == 0:
             print ('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
-                   .format(epoch+1, args.num_epochs, batch_idx+1, total_step, disc_loss.item(), gen_loss.item()))
+                   .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
 
-    # scheduler_d.step()
-    # scheduler_g.step()
+            torchvision.utils.save_image(data, 'out/real_samples_epoch{}_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
 
-fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
+            samples = generator(fixed_z).cpu().data
+            torchvision.utils.save_image(samples, 'out/fake_samples_epoch{}_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
+
+# Evaluation function
 def evaluate(epoch):
 
     if matplotlib_is_available:
@@ -140,14 +163,12 @@ def evaluate(epoch):
             ax.set_aspect('equal')
             plt.imshow(sample.transpose((1,2,0)) * 0.5 + 0.5)
 
-        if not os.path.exists('out/'):
-            os.makedirs('out/')
-
         plt.savefig('out/{}.png'.format(str(epoch).zfill(3)), bbox_inches='tight')
         plt.close(fig)
 
 os.makedirs(args.checkpoint_dir, exist_ok=True)
 
+# Train and evaluate in every epoch
 for epoch in range(args.num_epochs):
     train(epoch)
     evaluate(epoch)
