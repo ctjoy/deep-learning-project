@@ -89,8 +89,9 @@ total_step = len(loader)
 fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 def train(epoch):
 
-    if not os.path.exists('out/'):
-        os.makedirs('out/')
+    if not os.path.exists('out/real/') or os.path.exists('out/fake/'):
+        os.makedirs('out/real/')
+        os.makedirs('out/fake/')
 
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
