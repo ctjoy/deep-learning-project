@@ -9,21 +9,8 @@ import torchvision
 from torch.autograd import Variable
 # import model_resnet
 from model import dcgan
-from evaluation import inception_score
-
-import numpy as np
-
-matplotlib_is_available = True
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
-
-except ImportError:
-    print("Will skip plotting; matplotlib is not available.")
-    matplotlib_is_available = False
-
+from evaluation.inception_score import inception_score
+from evaluation.fid_score import calculate_fid_given_paths
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -140,41 +127,24 @@ def train(epoch):
             print('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
                    .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
 
-            use_cuda = True if torch.cuda.is_available() else False
-            print('Inception Score: {}'.format(inception_score(data, cuda=use_cuda, batch_size=32, resize=True, splits=10)))
-
-            torchvision.utils.save_image(data, 'out/real_samples_epoch{}_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
+            # Save the picture
+            torchvision.utils.save_image(data, 'out/real/epoch_{}_batch_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
 
             samples = generator(fixed_z).cpu().data
-            torchvision.utils.save_image(samples, 'out/fake_samples_epoch{}_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
+            torchvision.utils.save_image(samples, 'out/fake/epoch_{}_batch_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
 
-# Evaluation function
-def evaluate(epoch):
+            # Calulate the inception score and FID score
+            use_cuda = True if torch.cuda.is_available() else False
+            inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cuda, batch_size=32, resize=True, splits=10)
+            print('Inception Score: {:.2f}±{:.2f}'.format(inception_score_mean, inception_score_std)
 
-    if matplotlib_is_available:
-        samples = generator(fixed_z).cpu().data.numpy()[:64]
-
-
-        fig = plt.figure(figsize=(8, 8))
-        gs = gridspec.GridSpec(8, 8)
-        gs.update(wspace=0.05, hspace=0.05)
-
-        for i, sample in enumerate(samples):
-            ax = plt.subplot(gs[i])
-            plt.axis('off')
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.set_aspect('equal')
-            plt.imshow(sample.transpose((1,2,0)) * 0.5 + 0.5)
-
-        plt.savefig('out/{}.png'.format(str(epoch).zfill(3)), bbox_inches='tight')
-        plt.close(fig)
+            fid_score = calculate_fid_given_paths(('out/real', 'out/fake'), args.batch_size, device)
+            print('FID Score: {:.2f}'.format(fid_score))
 
 os.makedirs(args.checkpoint_dir, exist_ok=True)
 
 # Train and evaluate in every epoch
 for epoch in range(args.num_epochs):
     train(epoch)
-    evaluate(epoch)
     torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, 'disc_{}'.format(epoch)))
     torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, 'gen_{}'.format(epoch)))
