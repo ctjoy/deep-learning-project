@@ -8,7 +8,8 @@ import torch.optim as optim
 import torchvision
 from torch.autograd import Variable
 # import model_resnet
-import model
+from model import dcgan
+from evaluation import inception_score
 
 import numpy as np
 
@@ -63,8 +64,8 @@ d_iters = 5 # Number of updates to discriminator for every update to generator
 #     discriminator = model_resnet.Discriminator().to(device)
 #     generator = model_resnet.Generator(Z_dim).to(device)
 # else:
-discriminator = model.Discriminator().to(device)
-generator = model.Generator(Z_dim).to(device)
+discriminator = dcgan.Discriminator().to(device)
+generator = dcgan.Generator(Z_dim).to(device)
 
 # Optimizer
 optim_disc = optim.Adam(discriminator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
@@ -136,8 +137,11 @@ def train(epoch):
         optim_gen.step()
 
         if (batch_idx+1) % 100 == 0:
-            print ('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
+            print('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
                    .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
+
+            use_cuda = True if torch.cuda.is_available() else False
+            print('Inception Score: {}'.format(inception_score(data, cuda=use_cuda, batch_size=32, resize=True, splits=10)))
 
             torchvision.utils.save_image(data, 'out/real_samples_epoch{}_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
 
