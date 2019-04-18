@@ -16,13 +16,6 @@ from evaluation.fid_score import calculate_fid_given_paths
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-FID_SCORE_BLOCK_INDEX_BY_DIM = {
-    64: 0,   # First max pooling features
-    192: 1,  # Second max pooling featurs
-    768: 2,  # Pre-aux classifier features
-    2048: 3  # Final average pooling features
-}
-
 # Hyper parameters
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=64)
@@ -30,10 +23,6 @@ parser.add_argument('--num_epochs', type=int, default=200)
 parser.add_argument('--loss', type=str, default='hinge')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
 parser.add_argument('--model', type=str, default='resnet')
-parser.add_argument('--fid_sroce_feature_dims', type=int, default=2048,
-                    choices=list(FID_SCORE_BLOCK_INDEX_BY_DIM),
-                    help=('Dimensionality of Inception features to use. '
-                          'By default, uses pool3 features'))
 
 args = parser.parse_args()
 
@@ -55,7 +44,8 @@ Z_dim = 128
 adam_alpha = 0.0002
 adam_beta1 = 0.0
 adam_beta2 = 0.9
-d_iters = 5 # Number of updates to discriminator for every update to generator
+n_dis = 5 # Number of updates to discriminator for every update to generator
+# step = 100000
 
 # Model
 # if args.model == 'resnet':
@@ -100,11 +90,8 @@ total_step = len(loader)
 fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 def train(epoch):
 
-    if not os.path.exists('out/real/'):
-        os.makedirs('out/real/')
-
-    if not os.path.exists('out/fake/'):
-        os.makedirs('out/fake/')
+    if not os.path.exists('out/'):
+        os.makedirs('out/')
 
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
@@ -113,7 +100,7 @@ def train(epoch):
         target = target.to(device)
 
         # Update discriminator
-        for _ in range(d_iters):
+        for _ in range(n_dis):
             z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
             optim_disc.zero_grad()
 
@@ -141,11 +128,12 @@ def train(epoch):
             print('Epoch [{}/{}], Step [{}/{}], Disc Loss: {:.4f}, Gen Loss: {:.4f}'
                   .format(epoch+1, args.num_epochs, batch_idx+1, total_step, loss_disc.item(), loss_gen.item()))
 
+        if batch_idx == 0:
             # Save the picture
-            torchvision.utils.save_image(data, 'out/real/epoch_{}_batch_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
+            torchvision.utils.save_image(data, 'out/real_epoch_{}.png'.format(str(epoch).zfill(3)), normalize=True)
 
             samples = generator(fixed_z).cpu().data
-            torchvision.utils.save_image(samples, 'out/fake/epoch_{}_batch_{}.png'.format(str(epoch).zfill(3), batch_idx+1), normalize=True)
+            torchvision.utils.save_image(samples, 'out/fake_epoch_{}.png'.format(str(epoch).zfill(3)), normalize=True)
 
             # Calulate the inception score and FID score
             use_cuda = True if torch.cuda.is_available() else False
