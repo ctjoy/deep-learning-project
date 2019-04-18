@@ -44,15 +44,13 @@ they generate examples that are much more diverse than the conventional weight n
 ## Implementation Details
 ## The task we complete
 - [ ] init value
+- [ ] redo the ResNet-like model (with spectral normalization)
 - [x] redo the DCGAN-like model (with spectral normalization)
 - [x] using CIFAR-10 dataset
 - [x] Inception scores
 - [x] FID scores
-- [ ] using STL-10 dataset
-- [ ] using ImageNet
-- [ ] redo the ResNet-like model (with spectral normalization)
+- [x] using STL-10 dataset
 - [ ] add GAN hack on the model
-- [ ] apply a new application gan with spectral normalization
 - [ ] add spectral normalization on generator because this [paper](https://sthalles.github.io/advanced_gans/)
 
 ## References
