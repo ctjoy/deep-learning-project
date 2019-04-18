@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torchvision
 from model import dcgan
-from evaluate.inception_score import inception_score
+from score.inception_score import inception_score
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -90,7 +90,7 @@ inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cu
 print('Inception Score: Mean = {:.2f} \tStd = {:.2f}'.format(inception_score_mean, inception_score_std))
 
 print("Calculating FID Score...")
-command = './evaluate/pytorch_fid/fid_score.py real/ fake/'
+command = './score/pytorch_fid/fid_score.py real/ fake/'
 os.system(command)
 # fid_score = calculate_fid_given_paths(('real/', 'fake/'), args.batch_size, device, args.fid_sroce_feature_dims)
 # print('FID Score: {:.2f}'.format(fid_score))
