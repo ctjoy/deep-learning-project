@@ -1,3 +1,6 @@
-[submodule "score/pytorch_fid"]
-	path = score/pytorch_fid
+[submodule "score/fid_score"]
+	path = score/fid_score
 	url = https://github.com/mseitzer/pytorch-fid
+[submodule "score/inception_score"]
+	path = score/inception_score
+	url = https://github.com/sbarratt/inception-score-pytorch

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import os
+import subprocess
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -70,11 +71,11 @@ for batch_idx, (data, target) in enumerate(loader):
     samples = generator(z).cpu().data
     eval_images.append(samples)
 
-    if not os.path.exists('fake/'):
-        os.makedirs('fake/')
+    if not os.path.exists('out/fake/'):
+        os.makedirs('out/fake/')
 
-    if not os.path.exists('real/'):
-        os.makedirs('real/')
+    if not os.path.exists('out/real/'):
+        os.makedirs('out/real/')
 
     torchvision.utils.save_image(samples, 'fake/{}.png'.format(str(args.batch_size).zfill(5)), normalize=True)
     torchvision.utils.save_image(data, 'real/{}.png'.format(str(0).zfill(3)), normalize=True)
@@ -87,11 +88,13 @@ eval_images = list(eval_images)
 # Calc Inception score
 print("Calculating Inception Score...")
 use_cuda = True if torch.cuda.is_available() else False
-inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cuda, batch_size=args.batch_size, resize=True)
+inception_score_mean, inception_score_std = inception_score(eval_images, cuda=use_cuda, batch_size=args.batch_size, resize=True)
 print('Inception Score: Mean = {:.2f} \tStd = {:.2f}'.format(inception_score_mean, inception_score_std))
 
 print("Calculating FID Score...")
-command = './score/pytorch_fid/fid_score.py real/ fake/'
-os.system(command)
+fid_score_file = 'score/fid_score/fid_score.py'
+real_image_path = 'out/real/'
+fake_image_path = 'out/fake/'
+subprocess.run([fid_score_file, real_image_path, fake_image_path])
 # fid_score = calculate_fid_given_paths(('real/', 'fake/'), args.batch_size, device, args.fid_sroce_feature_dims)
 # print('FID Score: {:.2f}'.format(fid_score))
