@@ -20,6 +20,7 @@ parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epoch', type=int, default=0)
 parser.add_argument('--model', type=str, default='dcgan')
 parser.add_argument('--loss', type=str, default='hinge')
+parser.add_argument('--dataset', type=str, default='cifar10')
 
 args = parser.parse_args()
 
@@ -27,13 +28,22 @@ args = parser.parse_args()
 Z_dim = 128
 num_samples = 5000
 
-# CIFAR-10 dataset
-dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
-                                       download=True,
-                                       transform=torchvision.transforms.Compose([
-                                           torchvision.transforms.Resize(32),
-                                           torchvision.transforms.ToTensor(),
-                                           torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+if args.model == 'cifar10':
+    # CIFAR-10 dataset
+    dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
+                                           download=True,
+                                           transform=torchvision.transforms.Compose([
+                                               torchvision.transforms.Resize(32),
+                                               torchvision.transforms.ToTensor(),
+                                               torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+else:
+    # STL-10 dataset
+    dataset = torchvision.datasets.STL10(root='../data', train=True,
+                                           download=True,
+                                           transform=torchvision.transforms.Compose([
+                                               torchvision.transforms.Resize(32),
+                                               torchvision.transforms.ToTensor(),
+                                               torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
 
 # Data loader
 loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
@@ -44,7 +54,7 @@ loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
 #     generator = model_resnet.Generator(Z_dim).to(device)
 # else:
 generator = dcgan.Generator(Z_dim).to(device)
-generator.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, '{}_{}_gen_{}'.format(args.model, args.loss, args.epoch))))
+generator.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, '{}_{}_{}_gen_{}'.format(args.model, args.loss, args.dataset, args.epoch))))
 
 # Generate fake and real images
 print("Sampling {} images...".format(num_samples))
@@ -66,8 +76,8 @@ for batch_idx, (data, target) in enumerate(loader):
     if not os.path.exists('out/real/'):
         os.makedirs('out/real/')
 
-    torchvision.utils.save_image(samples, 'out/{}_{}/fake/{}.png'.format(args.model, args.loss, str(batch_idx).zfill(5)), normalize=True)
-    torchvision.utils.save_image(data, 'out/{}_{}/real/{}.png'.format(args.model, args.loss, str(batch_idx).zfill(3)), normalize=True)
+    torchvision.utils.save_image(samples, 'out/{}_{}_{}/fake/{}.png'.format(args.model, args.loss, args.dataset, str(batch_idx).zfill(5)), normalize=True)
+    torchvision.utils.save_image(data, 'out/{}_{}_{}/real/{}.png'.format(args.model, args.loss, args.dataset, str(batch_idx).zfill(3)), normalize=True)
 
 eval_images = np.vstack(eval_images)
 eval_images = eval_images[:num_samples]

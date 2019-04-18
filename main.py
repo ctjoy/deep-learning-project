@@ -21,17 +21,26 @@ parser.add_argument('--num_epochs', type=int, default=200)
 parser.add_argument('--loss', type=str, default='hinge')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
 parser.add_argument('--model', type=str, default='resnet')
+parser.add_argument('--dataset', type=str, default='cifar10')
 
 args = parser.parse_args()
 
-# CIFAR-10 dataset
-dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
-                                       download=True,
-                                       transform=torchvision.transforms.Compose([
-                                           torchvision.transforms.Resize(32),
-                                           torchvision.transforms.ToTensor(),
-                                           torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
-
+if args.model == 'cifar10':
+    # CIFAR-10 dataset
+    dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
+                                           download=True,
+                                           transform=torchvision.transforms.Compose([
+                                               torchvision.transforms.Resize(32),
+                                               torchvision.transforms.ToTensor(),
+                                               torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+else:
+    # STL-10 dataset
+    dataset = torchvision.datasets.STL10(root='../data', train=True,
+                                           download=True,
+                                           transform=torchvision.transforms.Compose([
+                                               torchvision.transforms.Resize(32),
+                                               torchvision.transforms.ToTensor(),
+                                               torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
 
 # Data loader
 loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
@@ -88,8 +97,8 @@ total_step = len(loader)
 fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 def train(epoch):
 
-    if not os.path.exists('out/{}_{}/training/'.format(args.model, args.loss)):
-        os.makedirs('out/{}_{}/training/'.format(args.model, args.loss))
+    if not os.path.exists('out/{}_{}_{}/training/'.format(args.model, args.loss, args.dataset)):
+        os.makedirs('out/{}_{}_{}/training/'.format(args.model, args.loss, args.dataset))
 
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
@@ -128,15 +137,15 @@ def train(epoch):
 
         if batch_idx == 0:
             # Save the picture
-            torchvision.utils.save_image(data, 'out/{}_{}/training/real_epoch_{}.png'.format(args.model, args.loss, str(epoch).zfill(3)), normalize=True)
+            torchvision.utils.save_image(data, 'out/{}_{}_{}/training/real_epoch_{}.png'.format(args.model, args.loss, args.dataset, str(epoch).zfill(3)), normalize=True)
 
             samples = generator(fixed_z).cpu().data
-            torchvision.utils.save_image(samples, 'out/{}_{}/training/fake_epoch_{}.png'.format(args.model, args.loss, str(epoch).zfill(3)), normalize=True)
+            torchvision.utils.save_image(samples, 'out/{}_{}_{}/training/fake_epoch_{}.png'.format(args.model, args.loss, args.dataset, str(epoch).zfill(3)), normalize=True)
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
 # Train and evaluate in every epoch
 for epoch in range(args.num_epochs):
     train(epoch)
-    torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_disc_{}'.format(args.model, args.loss, epoch)))
-    torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_gen_{}'.format(args.model, args.loss, epoch)))
+    torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_{}_disc_{}'.format(args.model, args.loss, args.dataset, epoch)))
+    torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_{}_gen_{}'.format(args.model, args.loss, args.dataset, epoch)))
