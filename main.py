@@ -8,7 +8,7 @@ import torch.optim as optim
 import torchvision
 from torch.autograd import Variable
 # import model_resnet
-from model import dcgan
+from model import dcgan, resnet
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -46,12 +46,12 @@ n_dis = 5 # Number of updates to discriminator for every update to generator
 # step = 100000
 
 # Model
-# if args.model == 'resnet':
-#     discriminator = model_resnet.Discriminator().to(device)
-#     generator = model_resnet.Generator(Z_dim).to(device)
-# else:
-discriminator = dcgan.Discriminator().to(device)
-generator = dcgan.Generator(Z_dim).to(device)
+if args.model == 'resnet':
+    discriminator = resnet.Discriminator().to(device)
+    generator = resnet.Generator(Z_dim).to(device)
+else:
+    discriminator = dcgan.Discriminator().to(device)
+    generator = dcgan.Generator(Z_dim).to(device)
 
 # Optimizer
 optim_disc = optim.Adam(discriminator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
@@ -88,8 +88,8 @@ total_step = len(loader)
 fixed_z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
 def train(epoch):
 
-    if not os.path.exists('out/'):
-        os.makedirs('out/')
+    if not os.path.exists('out/{}_{}/training/'.format(args.model, args.loss)):
+        os.makedirs('out/{}_{}/training/'.format(args.model, args.loss))
 
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
@@ -128,15 +128,15 @@ def train(epoch):
 
         if batch_idx == 0:
             # Save the picture
-            torchvision.utils.save_image(data, 'out/real_epoch_{}.png'.format(str(epoch).zfill(3)), normalize=True)
+            torchvision.utils.save_image(data, 'out/{}_{}/training/real_epoch_{}.png'.format(args.model, args.loss, str(epoch).zfill(3)), normalize=True)
 
             samples = generator(fixed_z).cpu().data
-            torchvision.utils.save_image(samples, 'out/fake_epoch_{}.png'.format(str(epoch).zfill(3)), normalize=True)
+            torchvision.utils.save_image(samples, 'out/{}_{}/training/fake_epoch_{}.png'.format(args.model, args.loss, str(epoch).zfill(3)), normalize=True)
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
 # Train and evaluate in every epoch
 for epoch in range(args.num_epochs):
     train(epoch)
-    torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, 'disc_{}'.format(epoch)))
-    torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, 'gen_{}'.format(epoch)))
+    torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_disc_{}'.format(args.model, args.loss, epoch)))
+    torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, '{}_{}_gen_{}'.format(args.model, args.loss, epoch)))

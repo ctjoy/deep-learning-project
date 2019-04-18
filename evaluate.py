@@ -19,6 +19,7 @@ parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epoch', type=int, default=0)
 parser.add_argument('--model', type=str, default='dcgan')
+parser.add_argument('--loss', type=str, default='hinge')
 
 args = parser.parse_args()
 
@@ -43,7 +44,7 @@ loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
 #     generator = model_resnet.Generator(Z_dim).to(device)
 # else:
 generator = dcgan.Generator(Z_dim).to(device)
-generator.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, 'gen_{}'.format(args.epoch))))
+generator.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, '{}_{}_gen_{}'.format(args.model, args.loss, args.epoch))))
 
 # Generate fake and real images
 print("Sampling {} images...".format(num_samples))
@@ -65,8 +66,8 @@ for batch_idx, (data, target) in enumerate(loader):
     if not os.path.exists('out/real/'):
         os.makedirs('out/real/')
 
-    torchvision.utils.save_image(samples, 'out/fake/{}.png'.format(str(batch_idx).zfill(5)), normalize=True)
-    torchvision.utils.save_image(data, 'out/real/{}.png'.format(str(batch_idx).zfill(3)), normalize=True)
+    torchvision.utils.save_image(samples, 'out/{}_{}/fake/{}.png'.format(args.model, args.loss, str(batch_idx).zfill(5)), normalize=True)
+    torchvision.utils.save_image(data, 'out/{}_{}/real/{}.png'.format(args.model, args.loss, str(batch_idx).zfill(3)), normalize=True)
 
 eval_images = np.vstack(eval_images)
 eval_images = eval_images[:num_samples]
