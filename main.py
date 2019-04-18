@@ -9,8 +9,6 @@ import torchvision
 from torch.autograd import Variable
 # import model_resnet
 from model import dcgan
-from evaluation.inception_score import inception_score
-from evaluation.fid_score import calculate_fid_given_paths
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -135,15 +133,7 @@ def train(epoch):
             samples = generator(fixed_z).cpu().data
             torchvision.utils.save_image(samples, 'out/fake_epoch_{}.png'.format(str(epoch).zfill(3)), normalize=True)
 
-            # Calulate the inception score and FID score
-            use_cuda = True if torch.cuda.is_available() else False
-            inception_score_mean, inception_score_std = inception_score(samples, cuda=use_cuda, batch_size=32, resize=True, splits=10)
-            print('Inception Score: {:.2f}±{:.2f}'.format(inception_score_mean, inception_score_std))
-
-            fid_score = calculate_fid_given_paths(('out/real', 'out/fake'), args.batch_size, device, args.fid_sroce_feature_dims)
-            print('FID Score: {:.2f}'.format(fid_score))
-
-os.makedirs(args.checkpoint_dir, exist_ok=True)
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
 
 # Train and evaluate in every epoch
 for epoch in range(args.num_epochs):

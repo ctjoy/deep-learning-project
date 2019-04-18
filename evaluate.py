@@ -76,7 +76,7 @@ for batch_idx, (data, target) in enumerate(loader):
     if not os.path.exists('real/'):
         os.makedirs('real/')
 
-    torchvision.utils.save_image(samples, 'fake/{}.png'.format(str(batch_size).zfill(5)), normalize=True)
+    torchvision.utils.save_image(samples, 'fake/{}.png'.format(str(args.batch_size).zfill(5)), normalize=True)
     torchvision.utils.save_image(data, 'real/{}.png'.format(str(0).zfill(3)), normalize=True)
 
 eval_images = np.vstack(eval_images)
