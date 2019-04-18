@@ -7,18 +7,11 @@ import torch
 from torch.autograd import Variable
 import torchvision
 from model import dcgan
-from score.inception_score import inception_score
+from score.inception_score.inception_score import inception_score
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
-
-# FID_SCORE_BLOCK_INDEX_BY_DIM = {
-#     64: 0,   # First max pooling features
-#     192: 1,  # Second max pooling featurs
-#     768: 2,  # Pre-aux classifier features
-#     2048: 3  # Final average pooling features
-# }
 
 # Get model setting
 parser = argparse.ArgumentParser()
@@ -26,10 +19,6 @@ parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epoch', type=int, default=0)
 parser.add_argument('--model', type=str, default='dcgan')
-# parser.add_argument('--fid_sroce_feature_dims', type=int, default=2048,
-#                     choices=list(FID_SCORE_BLOCK_INDEX_BY_DIM),
-#                     help=('Dimensionality of Inception features to use. '
-#                           'By default, uses pool3 features'))
 
 args = parser.parse_args()
 
@@ -44,7 +33,6 @@ dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
                                            torchvision.transforms.Resize(32),
                                            torchvision.transforms.ToTensor(),
                                            torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
-
 
 # Data loader
 loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
@@ -77,8 +65,8 @@ for batch_idx, (data, target) in enumerate(loader):
     if not os.path.exists('out/real/'):
         os.makedirs('out/real/')
 
-    torchvision.utils.save_image(samples, 'fake/{}.png'.format(str(args.batch_size).zfill(5)), normalize=True)
-    torchvision.utils.save_image(data, 'real/{}.png'.format(str(0).zfill(3)), normalize=True)
+    torchvision.utils.save_image(samples, 'out/fake/{}.png'.format(str(args.batch_size).zfill(5)), normalize=True)
+    torchvision.utils.save_image(data, 'out/real/{}.png'.format(str(0).zfill(3)), normalize=True)
 
 eval_images = np.vstack(eval_images)
 eval_images = eval_images[:num_samples]
@@ -91,10 +79,9 @@ use_cuda = True if torch.cuda.is_available() else False
 inception_score_mean, inception_score_std = inception_score(eval_images, cuda=use_cuda, batch_size=args.batch_size, resize=True)
 print('Inception Score: Mean = {:.2f} \tStd = {:.2f}'.format(inception_score_mean, inception_score_std))
 
+# Calc FID score
 print("Calculating FID Score...")
 fid_score_file = 'score/fid_score/fid_score.py'
 real_image_path = 'out/real/'
 fake_image_path = 'out/fake/'
 subprocess.run([fid_score_file, real_image_path, fake_image_path])
-# fid_score = calculate_fid_given_paths(('real/', 'fake/'), args.batch_size, device, args.fid_sroce_feature_dims)
-# print('FID Score: {:.2f}'.format(fid_score))
