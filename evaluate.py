@@ -3,6 +3,7 @@ import argparse
 import os
 import numpy as np
 import torch
+from torch.autograd import Variable
 import torchvision
 from model import dcgan
 from score.inception_score import inception_score
@@ -67,7 +68,7 @@ for batch_idx, (data, target) in enumerate(loader):
 
     z = Variable(torch.randn(args.batch_size, Z_dim)).to(device)
     samples = generator(z).cpu().data
-    eval_images.append(images)
+    eval_images.append(samples)
 
     if not os.path.exists('fake/'):
         os.makedirs('fake/')
