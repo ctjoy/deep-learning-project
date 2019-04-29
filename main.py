@@ -25,7 +25,7 @@ parser.add_argument('--dataset', type=str, default='cifar10')
 
 args = parser.parse_args()
 
-if args.model == 'cifar10':
+if args.dataset == 'cifar10':
     # CIFAR-10 dataset
     dataset = torchvision.datasets.CIFAR10(root='../data', train=True,
                                            download=True,
