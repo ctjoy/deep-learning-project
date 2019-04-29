@@ -36,22 +36,15 @@ Using the [Inception Score](https://github.com/sbarratt/inception-score-pytorch)
 python evaluate.py
 ```
 
-## Main prolem they solved.
+## What problem does SNGAN solve?
 they generate examples that are much more diverse than the conventional weight normalization and achieve better or comparative inception scores.
 
-## Why don't use on generator?
-
 ## Implementation Details
-## The task we complete
-- [ ] init value
-- [ ] redo the ResNet-like model (with spectral normalization)
+- [x] init value
+- [x] redo the ResNet-like model (with spectral normalization)
 - [x] redo the DCGAN-like model (with spectral normalization)
-- [x] using CIFAR-10 dataset
-- [x] Inception scores
-- [x] FID scores
-- [x] using STL-10 dataset
-- [ ] add GAN hack on the model
-- [ ] add spectral normalization on generator because this [paper](https://sthalles.github.io/advanced_gans/)
+- [x] add GAN hack on the model
+- [x] add spectral normalization on generator because this [paper](https://sthalles.github.io/advanced_gans/)
 
 ## References
 - Miyato, Takeru, et al. "Spectral normalization for generative adversarial networks." arXiv preprint arXiv:1802.05957 (2018). [OpenReview](https://openreview.net/forum?id=B1QRgziT-)

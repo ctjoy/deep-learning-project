@@ -63,7 +63,8 @@ else:
     generator = dcgan.Generator(Z_dim).to(device)
 
 # Optimizer
-optim_disc = optim.Adam(discriminator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
+# optim_disc = optim.Adam(discriminator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
+optim_disc = optim.SGD(discriminator.parameters(), lr = 0.01, momentum=0.9)
 optim_gen  = optim.Adam(generator.parameters(), lr=adam_alpha, betas=(adam_beta1,adam_beta2))
 
 # Loss function

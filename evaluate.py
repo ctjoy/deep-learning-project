@@ -70,18 +70,17 @@ for batch_idx, (data, target) in enumerate(loader):
     samples = generator(z).cpu().data
     eval_images.append(samples)
 
-    if not os.path.exists('out/fake/'):
-        os.makedirs('out/fake/')
+    if not os.path.exists('out/{}_{}_{}/fake/'.format(args.model, args.loss, args.dataset)):
+        os.makedirs('out/{}_{}_{}/fake/'.format(args.model, args.loss, args.dataset))
 
-    if not os.path.exists('out/real/'):
-        os.makedirs('out/real/')
+    if not os.path.exists('out/{}_{}_{}/real/'.format(args.model, args.loss, args.dataset)):
+        os.makedirs('out/{}_{}_{}/real/'.format(args.model, args.loss, args.dataset))
 
     torchvision.utils.save_image(samples, 'out/{}_{}_{}/fake/{}.png'.format(args.model, args.loss, args.dataset, str(batch_idx).zfill(5)), normalize=True)
     torchvision.utils.save_image(data, 'out/{}_{}_{}/real/{}.png'.format(args.model, args.loss, args.dataset, str(batch_idx).zfill(3)), normalize=True)
 
 eval_images = np.vstack(eval_images)
 eval_images = eval_images[:num_samples]
-eval_images = np.clip((eval_images + 1.0) * 127.5, 0.0, 255.0).astype(np.uint8)
 eval_images = list(eval_images)
 
 # Calc Inception score
@@ -93,6 +92,6 @@ print('Inception Score: Mean = {:.2f} \tStd = {:.2f}'.format(inception_score_mea
 # Calc FID score
 print("Calculating FID Score...")
 fid_score_file = 'score/fid_score/fid_score.py'
-real_image_path = 'out/real/'
-fake_image_path = 'out/fake/'
+real_image_path = 'out/{}_{}_{}/real/'.format(args.model, args.loss, args.dataset)
+fake_image_path = 'out/{}_{}_{}/fake/'.format(args.model, args.loss, args.dataset)
 subprocess.run([fid_score_file, real_image_path, fake_image_path])

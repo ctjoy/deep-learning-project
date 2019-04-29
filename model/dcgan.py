@@ -12,19 +12,19 @@ class Generator(nn.Module):
         self.z_dim = z_dim
 
         self.model = nn.Sequential(
-            nn.ConvTranspose2d(z_dim, 512, 4, stride=1),
+            spectral_norm(nn.ConvTranspose2d(z_dim, 512, 4, stride=1)),
             nn.BatchNorm2d(512),
-            nn.ReLU(),
-            nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1,1)),
+            nn.LeakyReLU(leak, inplace=True),
+            spectral_norm(nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1,1))),
             nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1,1)),
+            nn.LeakyReLU(leak, inplace=True),
+            spectral_norm(nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1,1))),
             nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1,1)),
+            nn.LeakyReLU(leak, inplace=True),
+            spectral_norm(nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1,1))),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1,1)),
+            nn.LeakyReLU(leak, inplace=True),
+            spectral_norm(nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1,1))),
             nn.Tanh())
 
     def forward(self, z):
