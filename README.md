@@ -8,8 +8,8 @@ This is the final project of [Deep Learning on Computational Accelerators](https
 ## Install
 1. Clone this repository and make sure you installed the python3 version of [miniconda](https://docs.conda.io/en/latest/miniconda.html).
 ```
-git clone --recurse-submodules https://github.com/ctjoy/spectral-normalization-gan
-cd spectral-normalization-gan
+git clone --recurse-submodules https://github.com/ctjoy/deep-learning-project
+cd deep-learning-project
 ```
 2. Use conda to create a virtual environment named `sngan`. From the root directory, run
 ```
@@ -37,14 +37,17 @@ python evaluate.py
 ```
 
 ## What problem does SNGAN solve?
-they generate examples that are much more diverse than the conventional weight normalization and achieve better or comparative inception scores.
+When using the SNGAN, they can generate examples that are much more diverse than the conventional weight normalization and achieve better or comparative inception scores.
 
 ## Implementation Details
-- [x] init value
 - [x] redo the ResNet-like model (with spectral normalization)
 - [x] redo the DCGAN-like model (with spectral normalization)
+- [x] using the Xavier initialization in ResNet
 - [x] add GAN hack on the model
-- [x] add spectral normalization on generator because this [paper](https://sthalles.github.io/advanced_gans/)
+- [x] [Self-Attention for GANs](https://arxiv.org/abs/1805.08318) proposed using spectral normalization for stabilizing training of the generator network as well, so we also add spectral normalization on the generator.
+
+## Result
+![result](generate_image.png)
 
 ## References
 - Miyato, Takeru, et al. "Spectral normalization for generative adversarial networks." arXiv preprint arXiv:1802.05957 (2018). [OpenReview](https://openreview.net/forum?id=B1QRgziT-)
@@ -52,6 +55,7 @@ they generate examples that are much more diverse than the conventional weight n
 - [How to Train a GAN? Tips and tricks to make GANs work](https://github.com/soumith/ganhacks)
 - [GENERATIVE ADVERSARIAL NETWORKS – PAPER READING ROAD MAP](http://www.codingwoman.com/generative-adversarial-networks-paper-reading-road-map/)
 - [Generative Adversarial Networks (GANs) in 50 lines of code (PyTorch)](https://medium.com/@devnag/generative-adversarial-networks-gans-in-50-lines-of-code-pytorch-e81b79659e3f)
+- [Advanced GANs - Exploring Normalization Techniques for GAN training: Self-Attention and Spectral Norm](https://sthalles.github.io/advanced_gans/)
 
 ## Acknowledgment
 Based on the following implementation
